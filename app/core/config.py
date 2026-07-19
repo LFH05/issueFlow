@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     app_env: str = "development"
     debug: bool = False
     database_url: str = "postgresql+psycopg://issueflow:issueflow@localhost:5432/issueflow"
+    test_database_url: str = (
+        "postgresql+psycopg://issueflow:issueflow@localhost:5433/test_issueflow"
+    )
     secret_key: str = "development-only-change-me"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
