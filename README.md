@@ -61,8 +61,17 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
+docker compose up -d db test_db
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
+
+`docker compose up -d db test_db` 会在后台启动两个 PostgreSQL 容器：
+
+- `db`：开发数据库，Windows 本机端口是 `5432`，数据库名是 `issueflow`。
+- `test_db`：测试数据库，Windows 本机端口是 `5433`，数据库名是 `test_issueflow`。
+
+`alembic upgrade head` 会把开发数据库升级到最新表结构。本项目不使用 `Base.metadata.create_all()` 创建正式表结构，数据库结构变化都应通过 Alembic 迁移管理。
 
 启动后可以访问：
 
@@ -70,11 +79,71 @@ uvicorn app.main:app --reload
 - 健康检查：<http://127.0.0.1:8000/api/health>
 - API 文档：<http://127.0.0.1:8000/docs>
 
+## 数据库命令
+
+启动数据库：
+
+```powershell
+docker compose up -d db test_db
+```
+
+查看容器状态：
+
+```powershell
+docker compose ps
+```
+
+检查开发库是否可连接：
+
+```powershell
+docker compose exec db pg_isready -U issueflow -d issueflow
+```
+
+检查测试库是否可连接：
+
+```powershell
+docker compose exec test_db pg_isready -U issueflow -d test_issueflow
+```
+
+查看当前迁移版本：
+
+```powershell
+alembic current
+```
+
+升级到最新迁移：
+
+```powershell
+alembic upgrade head
+```
+
+回退一个迁移版本：
+
+```powershell
+alembic downgrade -1
+```
+
+停止容器但保留数据：
+
+```powershell
+docker compose down
+```
+
+删除容器和数据库数据卷：
+
+```powershell
+docker compose down -v
+```
+
+`docker compose down -v` 会删除 PostgreSQL 数据卷，开发库和测试库里的数据都会丢失；只有在你明确想重置本地数据库时再使用。
+
 运行测试：
 
 ```powershell
 pytest
 ```
+
+测试会连接 `.env` 或 `.env.example` 中的 `TEST_DATABASE_URL`。测试夹具会检查数据库名必须包含 `test`，避免误连开发库。
 
 ## 开发流程
 
@@ -83,6 +152,10 @@ pytest
 3. 推送分支并创建 Pull Request。
 4. 检查变更和 CI 后合并到受保护的 `main`。
 5. 删除已合并分支并同步本地 `main`。
+
+## 分功能阶段规划
+
+项目的完整开发路线已拆分为可以独立开发、测试和提交 Pull Request 的功能阶段。开始下一项功能前，请先阅读 [分功能阶段实现规划](./分功能阶段实现规划/README.md)，每次只实施其中一个规划文件。
 
 ## 当前状态
 
